@@ -77,8 +77,14 @@ namespace dsn.dev.csharp
         {
             dsn_rpc_request_handler_t cb = (dsn_message_t req, IntPtr param) =>
             {
-                RpcReadStream rms = new RpcReadStream(req, false);
-                RpcWriteStream wms = new RpcWriteStream(Native.dsn_msg_create_response(req), false);
+                // if handler synchnously processes the incoming request
+                // we don't need to add_ref and set owner to true 
+                // in folloiwng two stmts
+                // however, we don't know so we do as follows
+                Native.dsn_msg_add_ref(req); // released by RpcReadStream 
+                RpcReadStream rms = new RpcReadStream(req, true);
+
+                RpcWriteStream wms = new RpcWriteStream(Native.dsn_msg_create_response(req));
                 handler(rms, wms);    
             };
 
