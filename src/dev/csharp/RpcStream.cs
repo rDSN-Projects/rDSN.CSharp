@@ -29,21 +29,16 @@ namespace dsn.dev.csharp
 
     public class Message : SafeHandleZeroIsInvalid
     {
-        private bool _isOwner;
         public Message(IntPtr msg, bool owner)
-            : base(IntPtr.Zero, owner)
+            : base(msg, owner)
         {
-            SetHandle(msg);
-            _isOwner = owner;
         }
 
         protected override bool ReleaseHandle()
         {
             if (!IsInvalid)
             {
-                if (_isOwner)
-                    Native.dsn_msg_release_ref(handle);
-
+                Native.dsn_msg_release_ref(handle);
                 return true;
             }
             else
@@ -95,8 +90,8 @@ namespace dsn.dev.csharp
             _length = 0;
         }
 
-        public RpcWriteStream(IntPtr msg, bool owner, int minSize = 256)
-            : base(msg, owner, false)
+        public RpcWriteStream(IntPtr msg, int minSize = 256)
+            : base(msg, false, false)
         {
             _currentWriteOffset = 0;
             _currentBufferLength = IntPtr.Zero;
