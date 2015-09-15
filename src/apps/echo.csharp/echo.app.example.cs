@@ -35,7 +35,7 @@ namespace dsn.example
             Native.dsn_address_build(out _server.addr, args[1], ushort.Parse(args[2]));
 
             _echoClient = new echoClient(_server);
-            _timer = Clientlet.CallAsync3(echoHelper.LPC_ECHO_TEST_TIMER, null, this.OnTestTimer, 0, 0, 1000);
+            _timer = Clientlet.CallAsync2(echoHelper.LPC_ECHO_TEST_TIMER, null, this.OnTestTimer, 0, 0, 1000);
             return ErrorCode.ERR_OK;
         }
 

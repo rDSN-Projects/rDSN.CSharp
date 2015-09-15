@@ -12,11 +12,9 @@ namespace dsn.dev.csharp
 {
     using dsn_task_t = IntPtr;
     using dsn_handle_t = IntPtr;
-    using dsn_app_t = IntPtr;
         
     public class Clientlet : SafeHandleZeroIsInvalid
     {
-        private dsn_app_t _app = IntPtr.Zero;
         private int _access_thread_id;
         private bool _access_thread_id_inited;
     
@@ -26,7 +24,6 @@ namespace dsn.dev.csharp
         {
             SetHandle(Native.dsn_task_tracker_create(task_bucket_count));
             _access_thread_id_inited = false;
-            _app = IntPtr.Zero;
         }
 
         // use explicitly specified app as the host app
@@ -35,8 +32,6 @@ namespace dsn.dev.csharp
         {
             SetHandle(Native.dsn_task_tracker_create(task_bucket_count));
             _access_thread_id_inited = false;
-            _app = Native.dsn_query_app(host_app_name, host_app_index);
-            Logging.dassert(_app != IntPtr.Zero, "cannot find host app " + host_app_name + "." + host_app_index);
         }
 
         protected override bool ReleaseHandle()
@@ -62,10 +57,10 @@ namespace dsn.dev.csharp
             Native.dsn_task_tracker_cancel_all(handle);
         }
 
-        public RpcAddress PrimaryAddress() 
+        public static RpcAddress PrimaryAddress() 
         {
             var addr = new RpcAddress();
-            Native.dsn_primary_address2(out addr.addr, _app);
+            Native.dsn_primary_address2(out addr.addr);
             return addr;
         }
 
@@ -110,7 +105,7 @@ namespace dsn.dev.csharp
         static dsn_task_handler_t _c_task_handler_holder = c_task_handler;
         static dsn_task_handler_t _c_timer_task_handler_holder = c_timer_task_handler;
 
-        public void CallAsync(
+        public static void CallAsync(
             TaskCode evt,
             Clientlet callbackOwner,
             task_handler callback,
@@ -119,7 +114,7 @@ namespace dsn.dev.csharp
             )
         {
             int idx = GlobalInterOpLookupTable.Put(callback);
-            IntPtr task = Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash, _app);
+            IntPtr task = Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash);
             Native.dsn_task_call(task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, delay_milliseconds);
         }
 
@@ -127,7 +122,7 @@ namespace dsn.dev.csharp
         // this gives you the task handle so you can wait or cancel
         // the task, with the cost of add/ref the task handle
         // 
-        public SafeTaskHandle CallAsync2(
+        public static SafeTaskHandle CallAsync2(
             TaskCode evt,
             Clientlet callbackOwner,
             task_handler callback,
@@ -141,40 +136,17 @@ namespace dsn.dev.csharp
             SafeTaskHandle ret;
 
             if (timer_interval_milliseconds == 0)
-                task = Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash, _app);
+                task = Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash);
             else
-                task = Native.dsn_task_create_timer(evt, _c_timer_task_handler_holder, (IntPtr)idx, hash, timer_interval_milliseconds, _app);
+                task = Native.dsn_task_create_timer(evt, _c_timer_task_handler_holder, (IntPtr)idx, hash, timer_interval_milliseconds);
 
             ret = new SafeTaskHandle(task, idx);
             Native.dsn_task_call(task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, delay_milliseconds);
             return ret;
         }
 
-        public static SafeTaskHandle CallAsync3(
-            TaskCode evt,
-            Clientlet callbackOwner,
-            task_handler callback,
-            int hash = 0,
-            int delay_milliseconds = 0,
-            int timer_interval_milliseconds = 0,
-            dsn_app_t app = default(dsn_app_t)
-            )
-        {
-            int idx = GlobalInterOpLookupTable.Put(callback);
-            IntPtr task;
-
-            if (timer_interval_milliseconds == 0)
-                task = Native.dsn_task_create(evt, _c_task_handler_holder, (IntPtr)idx, hash, app);
-            else
-                task = Native.dsn_task_create_timer(evt, _c_timer_task_handler_holder, (IntPtr)idx, hash, timer_interval_milliseconds, app);
-
-            var ret = new SafeTaskHandle(task, idx);
-            Native.dsn_task_call(task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, delay_milliseconds);
-            return ret;
-        }
-                
         // no callback
-        public void RpcCallOneWay(
+        public static void RpcCallOneWay(
             RpcAddress server,
             RpcWriteStream requestStream
             )
@@ -182,10 +154,10 @@ namespace dsn.dev.csharp
             Logging.dassert(requestStream.IsFlushed(),
                 "RpcWriteStream must be flushed after write in the same thread");
 
-            Native.dsn_rpc_call_one_way(ref server.addr, requestStream.DangerousGetHandle(), _app);
+            Native.dsn_rpc_call_one_way(ref server.addr, requestStream.DangerousGetHandle());
         }
 
-        public RpcReadStream RpcCallSync(
+        public static RpcReadStream RpcCallSync(
             RpcAddress server,
             RpcWriteStream requestStream
             )
@@ -193,7 +165,7 @@ namespace dsn.dev.csharp
             Logging.dassert(requestStream.IsFlushed(), 
                 "RpcWriteStream must be flushed after write in the same thread");
 
-            IntPtr respMsg = Native.dsn_rpc_call_wait(ref server.addr, requestStream.DangerousGetHandle(), _app);
+            IntPtr respMsg = Native.dsn_rpc_call_wait(ref server.addr, requestStream.DangerousGetHandle());
             if (IntPtr.Zero == respMsg)
             {
                 return null;
@@ -224,7 +196,7 @@ namespace dsn.dev.csharp
 
         static dsn_rpc_response_handler_t _c_rpc_response_handler_holder = c_rpc_response_handler;
 
-        public void RpcCallAsync(
+        public static void RpcCallAsync(
             RpcAddress server,
             RpcWriteStream requestStream,
             Clientlet callbackOwner,
@@ -242,14 +214,14 @@ namespace dsn.dev.csharp
                 (IntPtr)idx, 
                 replyHash
                 );
-            Native.dsn_rpc_call(ref server.addr, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, _app);
+            Native.dsn_rpc_call(ref server.addr, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
         }
 
         //
         // this gives you the task handle so you can wait or cancel
         // the task, with the cost of add/ref the task handle
         // 
-        public SafeTaskHandle RpcCallAsync2(
+        public static SafeTaskHandle RpcCallAsync2(
             RpcAddress server,
             RpcWriteStream requestStream,
             Clientlet callbackOwner,
@@ -269,18 +241,18 @@ namespace dsn.dev.csharp
                 );
 
             var ret = new SafeTaskHandle(task, idx);
-            Native.dsn_rpc_call(ref server.addr, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero, _app);
+            Native.dsn_rpc_call(ref server.addr, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
             return ret;
         }
 
-        public dsn_handle_t FileOpen(string file_name, int flag, int pmode)
+        public static dsn_handle_t FileOpen(string file_name, int flag, int pmode)
         {
-            return Native.dsn_file_open(file_name, flag, pmode, _app);
+            return Native.dsn_file_open(file_name, flag, pmode);
         }
 
-        public ErrorCode FileClose(dsn_handle_t file)
+        public static ErrorCode FileClose(dsn_handle_t file)
         {
-            int err = Native.dsn_file_close(file, _app);
+            int err = Native.dsn_file_close(file);
             return new ErrorCode(err);
         }
 
@@ -296,7 +268,7 @@ namespace dsn.dev.csharp
 
         static dsn_aio_handler_t _c_aio_handler_holder = c_aio_handler;
 
-        public SafeTaskHandle FileRead(
+        public static SafeTaskHandle FileRead(
             dsn_handle_t hFile,
             byte[] buffer,
             int count,
@@ -308,12 +280,12 @@ namespace dsn.dev.csharp
             )
         {
             int idx = GlobalInterOpLookupTable.Put(callback);
-            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, _app);
+            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash);
             Native.dsn_file_read(hFile, buffer, count, offset, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
             return new SafeTaskHandle(task, idx);
         }
 
-        public SafeTaskHandle FileWrite(
+        public static SafeTaskHandle FileWrite(
             dsn_handle_t hFile,
             byte[] buffer,
             int count,
@@ -325,12 +297,12 @@ namespace dsn.dev.csharp
             )
         {
             int idx = GlobalInterOpLookupTable.Put(callback);
-            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, _app);
+            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash);
             Native.dsn_file_write(hFile, buffer, count, offset, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
             return new SafeTaskHandle(task, idx);
         }
 
-        public SafeTaskHandle CopyRemoteFiles(
+        public static SafeTaskHandle CopyRemoteFiles(
             dsn_address_t remote,
             string source_dir,
             string[] files,
@@ -343,12 +315,12 @@ namespace dsn.dev.csharp
             )
         {
             int idx = GlobalInterOpLookupTable.Put(callback);
-            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, _app);
+            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash);
             Native.dsn_file_copy_remote_files(ref remote, source_dir, files, dest_dir, overwrite, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
             return new SafeTaskHandle(task, idx);
         }
 
-        public SafeTaskHandle CopyRemoteDirectory(
+        public static SafeTaskHandle CopyRemoteDirectory(
             dsn_address_t remote,
             string source_dir,
             string dest_dir,
@@ -360,7 +332,7 @@ namespace dsn.dev.csharp
             )
         {
             int idx = GlobalInterOpLookupTable.Put(callback);
-            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash, _app);
+            dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash);
             Native.dsn_file_copy_remote_directory(ref remote, source_dir, dest_dir, overwrite, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
             return new SafeTaskHandle(task, idx);
         }            
