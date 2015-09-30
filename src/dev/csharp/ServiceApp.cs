@@ -51,7 +51,7 @@ namespace dsn.dev.csharp
             if (r == 0)
             {
                 sapp._started = true;
-                Native.dsn_primary_address2(out sapp._address.addr);
+                sapp._address = new RpcAddress(Native.dsn_primary_address());
                 sapp._name = argv[0];
             }
             return r;

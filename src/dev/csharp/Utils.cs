@@ -8,6 +8,8 @@ using System.Runtime.InteropServices;
 namespace dsn.dev.csharp
 {
     using dsn_task_t = IntPtr;
+    using dsn_address_t = UInt64;
+
     public struct ErrorCode
     {
         public static ErrorCode ERR_OK = new ErrorCode("ERR_OK");
@@ -202,19 +204,22 @@ namespace dsn.dev.csharp
 
         public RpcAddress()
         {
-            addr = new dsn_address_t();
+            addr = 0;
         }
 
         public RpcAddress(string host, UInt16 port)
         {
-            addr = new dsn_address_t();
-            addr.host = new UInt32[4];
-            Native.dsn_address_build(out addr, host, port);
+            addr = Native.dsn_address_build(host, port);
         }
 
         public static implicit operator dsn_address_t(RpcAddress c)
         {
             return c.addr;
+        }
+
+        public override string ToString()
+        {
+            return Native.dsn_address_to_string(addr);
         }
 
         public dsn_address_t addr;

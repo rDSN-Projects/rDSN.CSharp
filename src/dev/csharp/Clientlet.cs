@@ -12,7 +12,8 @@ namespace dsn.dev.csharp
 {
     using dsn_task_t = IntPtr;
     using dsn_handle_t = IntPtr;
-        
+    using dsn_address_t = UInt64;
+
     public class Clientlet : SafeHandleZeroIsInvalid
     {
         private int _access_thread_id;
@@ -59,9 +60,7 @@ namespace dsn.dev.csharp
 
         public static RpcAddress PrimaryAddress() 
         {
-            var addr = new RpcAddress();
-            Native.dsn_primary_address2(out addr.addr);
-            return addr;
+            return new RpcAddress(Native.dsn_primary_address());
         }
 
         public static UInt32 random32(UInt32 min, UInt32 max) { return Native.dsn_random32(min, max); }
@@ -154,7 +153,7 @@ namespace dsn.dev.csharp
             Logging.dassert(requestStream.IsFlushed(),
                 "RpcWriteStream must be flushed after write in the same thread");
 
-            Native.dsn_rpc_call_one_way(ref server.addr, requestStream.DangerousGetHandle());
+            Native.dsn_rpc_call_one_way(server.addr, requestStream.DangerousGetHandle());
         }
 
         public static RpcReadStream RpcCallSync(
@@ -165,7 +164,7 @@ namespace dsn.dev.csharp
             Logging.dassert(requestStream.IsFlushed(), 
                 "RpcWriteStream must be flushed after write in the same thread");
 
-            IntPtr respMsg = Native.dsn_rpc_call_wait(ref server.addr, requestStream.DangerousGetHandle());
+            IntPtr respMsg = Native.dsn_rpc_call_wait(server.addr, requestStream.DangerousGetHandle());
             if (IntPtr.Zero == respMsg)
             {
                 return null;
@@ -214,7 +213,7 @@ namespace dsn.dev.csharp
                 (IntPtr)idx, 
                 replyHash
                 );
-            Native.dsn_rpc_call(ref server.addr, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            Native.dsn_rpc_call(server.addr, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
         }
 
         //
@@ -241,7 +240,7 @@ namespace dsn.dev.csharp
                 );
 
             var ret = new SafeTaskHandle(task, idx);
-            Native.dsn_rpc_call(ref server.addr, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            Native.dsn_rpc_call(server.addr, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
             return ret;
         }
 
@@ -316,7 +315,7 @@ namespace dsn.dev.csharp
         {
             int idx = GlobalInterOpLookupTable.Put(callback);
             dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash);
-            Native.dsn_file_copy_remote_files(ref remote, source_dir, files, dest_dir, overwrite, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            Native.dsn_file_copy_remote_files(remote, source_dir, files, dest_dir, overwrite, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
             return new SafeTaskHandle(task, idx);
         }
 
@@ -333,7 +332,7 @@ namespace dsn.dev.csharp
         {
             int idx = GlobalInterOpLookupTable.Put(callback);
             dsn_task_t task = Native.dsn_file_create_aio_task(callbackCode, _c_aio_handler_holder, (IntPtr)idx, hash);
-            Native.dsn_file_copy_remote_directory(ref remote, source_dir, dest_dir, overwrite, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
+            Native.dsn_file_copy_remote_directory(remote, source_dir, dest_dir, overwrite, task, callbackOwner != null ? callbackOwner.tracker() : IntPtr.Zero);
             return new SafeTaskHandle(task, idx);
         }            
     };
