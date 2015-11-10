@@ -272,9 +272,9 @@ namespace dsn.dev.csharp
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static void        dsn_task_add_ref(dsn_task_t task);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static dsn_task_t  dsn_task_create(dsn_task_code_t code, dsn_task_handler_t cb, IntPtr param, int hash);
+        public extern static dsn_task_t  dsn_task_create(dsn_task_code_t code, dsn_task_handler_t cb, IntPtr param, int hash, dsn_task_tracker_t tracker = default(dsn_task_tracker_t));
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static dsn_task_t dsn_task_create_timer(dsn_task_code_t code, dsn_task_handler_t cb, IntPtr param, int hash, int interval_milliseconds);
+        public extern static dsn_task_t  dsn_task_create_timer(dsn_task_code_t code, dsn_task_handler_t cb, IntPtr param, int hash, int interval_milliseconds, dsn_task_tracker_t tracker = default(dsn_task_tracker_t));
         // repeated declarations later in correpondent rpc and file sections
         //[DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         //public extern static dsn_task_t  dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, IntPtr param, int reply_hash);
@@ -305,7 +305,7 @@ namespace dsn.dev.csharp
         // common task 
         //
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static void        dsn_task_call(dsn_task_t task, dsn_task_tracker_t tracker, int delay_milliseconds);
+        public extern static void        dsn_task_call(dsn_task_t task, int delay_milliseconds);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static bool        dsn_task_cancel(dsn_task_t task, bool wait_until_finished);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
@@ -454,9 +454,9 @@ namespace dsn.dev.csharp
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static IntPtr        dsn_rpc_unregiser_handler(dsn_task_code_t code);   // return IntPtr param on registration  
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static dsn_task_t    dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, IntPtr param, int reply_hash);
+        public extern static dsn_task_t dsn_rpc_create_response_task(dsn_message_t request, dsn_rpc_response_handler_t cb, IntPtr param, int reply_hash, dsn_task_tracker_t tracker = default(dsn_task_tracker_t));
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static void          dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call, dsn_task_tracker_t tracker);
+        public extern static void          dsn_rpc_call(dsn_address_t server, dsn_task_t rpc_call);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static dsn_message_t dsn_rpc_call_wait(dsn_address_t server, dsn_message_t request); // returned msg must be explicitly msg_release_ref
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
@@ -478,15 +478,15 @@ namespace dsn.dev.csharp
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static dsn_error_t  dsn_file_close(dsn_handle_t file);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static dsn_task_t   dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, IntPtr param, int hash);
+        public extern static dsn_task_t   dsn_file_create_aio_task(dsn_task_code_t code, dsn_aio_handler_t cb, IntPtr param, int hash, dsn_task_tracker_t tracker = default(dsn_task_tracker_t));
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static void         dsn_file_read(dsn_handle_t file, byte[] buffer, int count, UInt64 offset, dsn_task_t cb, dsn_task_tracker_t tracker = default(dsn_task_tracker_t));
+        public extern static void         dsn_file_read(dsn_handle_t file, byte[] buffer, int count, UInt64 offset, dsn_task_t cb);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static void         dsn_file_write(dsn_handle_t file, byte[] buffer, int count, UInt64 offset, dsn_task_t cb, dsn_task_tracker_t tracker = default(dsn_task_tracker_t));
+        public extern static void         dsn_file_write(dsn_handle_t file, byte[] buffer, int count, UInt64 offset, dsn_task_t cb);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static void         dsn_file_copy_remote_directory(dsn_address_t remote, string source_dir, string dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker = default(dsn_task_tracker_t));
+        public extern static void         dsn_file_copy_remote_directory(dsn_address_t remote, string source_dir, string dest_dir, bool overwrite, dsn_task_t cb);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
-        public extern static void         dsn_file_copy_remote_files(dsn_address_t remote, string source_dir, string[] source_files, string dest_dir, bool overwrite, dsn_task_t cb, dsn_task_tracker_t tracker = default(dsn_task_tracker_t));
+        public extern static void         dsn_file_copy_remote_files(dsn_address_t remote, string source_dir, string[] source_files, string dest_dir, bool overwrite, dsn_task_t cb);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
         public extern static size_t       dsn_file_get_io_size(dsn_task_t cb_task);
         [DllImport(DSN_CORE_DLL, CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi), SuppressUnmanagedCodeSecurity]
